@@ -33,27 +33,31 @@ const bookingCollection = db.collection("bookings");
 const CLIENT_URL = (
   process.env.CLIENT_URL ||
   process.env.BETTER_AUTH_URL ||
-//   "http://localhost:3000"
+  "http://localhost:3000"
 ).replace(/\/+$/, "");
 
 const JWKS = createRemoteJWKSet(new URL(`${CLIENT_URL}/api/auth/jwks`));
 
 const verifyToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
-
-  // Expected format: "Authorization: Bearer <jwt>"
-  const match = /^Bearer\s+(.+)$/i.exec(authHeader ?? "");
-  if (!match) {
+  if (!authHeader) {
+    return res.status(401).send({ msg: "Unauthorized!" });
+  }
+  const token = authHeader.split(" ")[1];
+  if (!token) {
     return res.status(401).send({ msg: "Unauthorized!" });
   }
 
-  try {
-    const { payload } = await jwtVerify(match[1], JWKS);
-    req.user = payload;
+  const JWKS = createRemoteJWKSet(
+    new URL(`${process.env.CLIENT_URL}/api/auth/jwks`),
+  );
+
+  try { 
+    const { payload } = await jwtVerify(token, JWKS);
+    console.log(payload)
     next();
   } catch (error) {
-    console.error("Token verification failed:", error.message);
-    return res.status(401).send({ msg: "Unauthorized!" });
+    return res.status(500).send({ msg: "Server Error!" });
   }
 };
 
